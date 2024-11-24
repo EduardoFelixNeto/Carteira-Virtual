@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    tools:context=".MainActivity">
+
+    <!-- Título ou saudação -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="T1 - Carteira Virtual"
+        android:gravity="center"
+        android:textSize="20sp"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Saldo -->
+    <TextView
+        android:id="@+id/tvBalance"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Saldo: R$0.00"
+        android:textSize="18sp"
+        android:gravity="center"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Botão Depositar -->
+    <Button
+        android:id="@+id/btnDeposit"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Depositar R$"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Botão Listar Recursos -->
+    <Button
+        android:id="@+id/btnListResources"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Listar Recursos"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Botão Converter Recursos -->
+    <Button
+        android:id="@+id/btnConvertResources"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Converter Recursos" />
+
+</LinearLayout>
