@@ -111,13 +111,36 @@ class ConvertResourcesActivity : AppCompatActivity() {
     private fun updateToCurrencyMaxAmount(fromCurrency: String, toCurrency: String) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val response = RetrofitInstance.api.getExchangeRates("$fromCurrency-$toCurrency")
-                val key = "$fromCurrency$toCurrency"
+                if (fromCurrency == toCurrency) {
+                    withContext(Dispatchers.Main) {
+                        tvToCurrencyMaxAmount.text = "Selecione uma moeda diferente da moeda de origem."
+                    }
+                    return@launch
+                }
+
+                // Escolher a chave correta para consulta na API
+                val conversionKey = if (toCurrency == "BTC" || toCurrency == "ETH") {
+                    "$toCurrency-$fromCurrency" // Conversão direta para BTC
+                } else {
+                    "$fromCurrency-$toCurrency" // Conversão reversa de BTC
+                }
+
+                // Fazer a requisição para a API
+                val response = RetrofitInstance.api.getExchangeRates(conversionKey)
+
+                val key = conversionKey.replace("-", "") // Formatar a chave esperada pela API
+
                 val conversionRate = response[key]?.bid?.toDoubleOrNull() ?: 0.0
 
+                // Obter o saldo e calcular o máximo que pode comprar
                 val fromBalance = userBalanceDao.getBalanceOrNull(fromCurrency)?.balance ?: 0.0
-                val maxAmount = fromBalance * conversionRate
+                val maxAmount = if (toCurrency == "BTC" || toCurrency == "ETH") {
+                    fromBalance / conversionRate // Conversão reversa
+                } else {
+                    fromBalance * conversionRate // Conversão direta
+                }
 
+                // Atualizar o texto com o máximo que pode comprar
                 withContext(Dispatchers.Main) {
                     tvToCurrencyMaxAmount.text = "Máximo que pode comprar: %.2f %s".format(maxAmount, toCurrency)
                 }
@@ -150,7 +173,6 @@ class ConvertResourcesActivity : AppCompatActivity() {
     }
 
     private fun performConversion(fromCurrency: String, toCurrency: String, amount: Double) {
-        // Verificar se as moedas de origem e destino são iguais
         if (fromCurrency == toCurrency) {
             Toast.makeText(this, "Selecione moedas diferentes para converter", Toast.LENGTH_SHORT).show()
             return
@@ -165,7 +187,7 @@ class ConvertResourcesActivity : AppCompatActivity() {
                 val fromBalance = userBalanceDao.getBalanceOrNull(fromCurrency) ?: UserBalance(fromCurrency, 0.0)
                 val toBalance = userBalanceDao.getBalanceOrNull(toCurrency) ?: UserBalance(toCurrency, 0.0)
 
-                // Verificar se há saldo suficiente na moeda de origem
+                // Verificar saldo suficiente na moeda de origem
                 if (fromBalance.balance < amount) {
                     withContext(Dispatchers.Main) {
                         progressBar.visibility = View.GONE
@@ -175,12 +197,29 @@ class ConvertResourcesActivity : AppCompatActivity() {
                     return@launch
                 }
 
-                // Consultar a taxa de conversão da API
-                val response = RetrofitInstance.api.getExchangeRates("$fromCurrency-$toCurrency")
-                val key = "$fromCurrency$toCurrency"
+                // Determinar o par de conversão correto
+                val isDigitalCurrencyConversion = (fromCurrency == "BTC" || toCurrency == "BTC" || fromCurrency == "ETH" || toCurrency == "ETH")
+
+                val conversionKey = if (isDigitalCurrencyConversion) {
+                    if (fromCurrency == "BTC") {
+                        "BTC-$toCurrency" // BTC -> outra moeda
+                    } else if (toCurrency == "BTC") {
+                        "BTC-$fromCurrency" // outra moeda -> BTC (inverso para a API)
+                    } else if (fromCurrency == "ETH") {
+                        "ETH-$toCurrency" // ETH -> outra moeda
+                    } else {
+                        "ETH-$fromCurrency" // outra moeda -> ETH (inverso para a API)
+                    }
+                } else {
+                    "$fromCurrency-$toCurrency" // Conversão normal
+                }
+
+                // Consultar a taxa de conversão na API
+                val response = RetrofitInstance.api.getExchangeRates(conversionKey)
+                val key = conversionKey.replace("-", "") // Formato da chave esperada na resposta
                 val conversionRate = response[key]?.bid?.toDoubleOrNull()
 
-                // Validar se a taxa de conversão foi obtida com sucesso
+                // Validar a taxa de conversão
                 if (conversionRate == null || conversionRate <= 0) {
                     withContext(Dispatchers.Main) {
                         progressBar.visibility = View.GONE
@@ -191,16 +230,24 @@ class ConvertResourcesActivity : AppCompatActivity() {
                 }
 
                 // Realizar a conversão
-                val convertedAmount = amount * conversionRate
+                val convertedAmount = if (isDigitalCurrencyConversion) {
+                    if (fromCurrency == "BTC" || fromCurrency == "ETH") {
+                        amount * conversionRate // BTC -> outra moeda
+                    } else {
+                        amount / conversionRate // outra moeda -> BTC
+                    }
+                } else {
+                    amount * conversionRate // Conversão normal
+                }
 
-                // Atualizar os saldos das moedas no banco de dados
+                // Atualizar os saldos no banco de dados
                 val updatedFromBalance = fromBalance.copy(balance = fromBalance.balance - amount)
                 val updatedToBalance = toBalance.copy(balance = toBalance.balance + convertedAmount)
 
                 userBalanceDao.insertOrUpdate(updatedFromBalance)
                 userBalanceDao.insertOrUpdate(updatedToBalance)
 
-                // Atualizar a interface do usuário e redirecionar para a listagem de recursos
+                // Atualizar a interface do usuário e redirecionar
                 withContext(Dispatchers.Main) {
                     progressBar.visibility = View.GONE
                     btnConvert.isEnabled = true
@@ -210,7 +257,6 @@ class ConvertResourcesActivity : AppCompatActivity() {
                         Toast.LENGTH_LONG
                     ).show()
 
-                    // Redirecionar para ListResourcesActivity
                     startActivity(Intent(this@ConvertResourcesActivity, ListResourcesActivity::class.java))
                     finish()
                 }
