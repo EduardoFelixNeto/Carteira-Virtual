@@ -6,13 +6,11 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
-// Modelo de dados (substitua pelo seu modelo real)
 data class ResourceItem(val currency: String, val balance: Double)
 
 class ResourcesAdapter(private val resourceList: List<ResourceItem>) :
     RecyclerView.Adapter<ResourcesAdapter.ResourceViewHolder>() {
 
-    // ViewHolder: representa cada item da lista
     class ResourceViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val currencyTextView: TextView = itemView.findViewById(R.id.tvCurrency)
         val balanceTextView: TextView = itemView.findViewById(R.id.tvBalance)

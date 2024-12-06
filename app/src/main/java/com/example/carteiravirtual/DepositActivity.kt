@@ -28,7 +28,6 @@ class DepositActivity : AppCompatActivity() {
                     val updatedBalance = balance.copy(balance = balance.balance + amount)
                     userBalanceDao.insertOrUpdate(updatedBalance)
 
-                    // Redirecionar para MainActivity
                     startActivity(Intent(this@DepositActivity, MainActivity::class.java))
                     finish()
                 }

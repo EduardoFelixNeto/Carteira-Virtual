@@ -28,7 +28,6 @@ class ConvertResourcesActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_convert_resources)
 
-        // Inicialização dos componentes
         spinnerFromCurrency = findViewById(R.id.spinnerFromCurrency)
         spinnerToCurrency = findViewById(R.id.spinnerToCurrency)
         etConvertAmount = findViewById(R.id.etConvertAmount)
@@ -44,11 +43,9 @@ class ConvertResourcesActivity : AppCompatActivity() {
     private fun setupSpinners() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // Buscar todas as moedas disponíveis no banco de dados
                 val availableCurrencies = userBalanceDao.getAllBalances().map { it.currency }
 
                 withContext(Dispatchers.Main) {
-                    // Configurar o Spinner de moeda de origem
                     val fromAdapter = ArrayAdapter(
                         this@ConvertResourcesActivity,
                         android.R.layout.simple_spinner_item,
@@ -57,7 +54,6 @@ class ConvertResourcesActivity : AppCompatActivity() {
                     fromAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
                     spinnerFromCurrency.adapter = fromAdapter
 
-                    // Configurar o Spinner de moeda de destino
                     val toAdapter = ArrayAdapter(
                         this@ConvertResourcesActivity,
                         android.R.layout.simple_spinner_item,
@@ -66,7 +62,6 @@ class ConvertResourcesActivity : AppCompatActivity() {
                     toAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
                     spinnerToCurrency.adapter = toAdapter
 
-                    // Adicionar listeners para os Spinners
                     spinnerFromCurrency.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                         override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                             val selectedCurrency = availableCurrencies[position]
@@ -118,29 +113,25 @@ class ConvertResourcesActivity : AppCompatActivity() {
                     return@launch
                 }
 
-                // Escolher a chave correta para consulta na API
                 val conversionKey = if (toCurrency == "BTC" || toCurrency == "ETH") {
-                    "$toCurrency-$fromCurrency" // Conversão direta para BTC
+                    "$toCurrency-$fromCurrency"
                 } else {
-                    "$fromCurrency-$toCurrency" // Conversão reversa de BTC
+                    "$fromCurrency-$toCurrency"
                 }
 
-                // Fazer a requisição para a API
                 val response = RetrofitInstance.api.getExchangeRates(conversionKey)
 
-                val key = conversionKey.replace("-", "") // Formatar a chave esperada pela API
+                val key = conversionKey.replace("-", "")
 
                 val conversionRate = response[key]?.bid?.toDoubleOrNull() ?: 0.0
 
-                // Obter o saldo e calcular o máximo que pode comprar
                 val fromBalance = userBalanceDao.getBalanceOrNull(fromCurrency)?.balance ?: 0.0
                 val maxAmount = if (toCurrency == "BTC" || toCurrency == "ETH") {
-                    fromBalance / conversionRate // Conversão reversa
+                    fromBalance / conversionRate
                 } else {
-                    fromBalance * conversionRate // Conversão direta
+                    fromBalance * conversionRate
                 }
 
-                // Atualizar o texto com o máximo que pode comprar
                 withContext(Dispatchers.Main) {
                     tvToCurrencyMaxAmount.text = "Máximo que pode comprar: %.2f %s".format(maxAmount, toCurrency)
                 }
@@ -183,11 +174,9 @@ class ConvertResourcesActivity : AppCompatActivity() {
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // Obter os saldos das moedas de origem e destino
                 val fromBalance = userBalanceDao.getBalanceOrNull(fromCurrency) ?: UserBalance(fromCurrency, 0.0)
                 val toBalance = userBalanceDao.getBalanceOrNull(toCurrency) ?: UserBalance(toCurrency, 0.0)
 
-                // Verificar saldo suficiente na moeda de origem
                 if (fromBalance.balance < amount) {
                     withContext(Dispatchers.Main) {
                         progressBar.visibility = View.GONE
@@ -197,29 +186,26 @@ class ConvertResourcesActivity : AppCompatActivity() {
                     return@launch
                 }
 
-                // Determinar o par de conversão correto
                 val isDigitalCurrencyConversion = (fromCurrency == "BTC" || toCurrency == "BTC" || fromCurrency == "ETH" || toCurrency == "ETH")
 
                 val conversionKey = if (isDigitalCurrencyConversion) {
                     if (fromCurrency == "BTC") {
-                        "BTC-$toCurrency" // BTC -> outra moeda
+                        "BTC-$toCurrency"
                     } else if (toCurrency == "BTC") {
-                        "BTC-$fromCurrency" // outra moeda -> BTC (inverso para a API)
+                        "BTC-$fromCurrency"
                     } else if (fromCurrency == "ETH") {
-                        "ETH-$toCurrency" // ETH -> outra moeda
+                        "ETH-$toCurrency"
                     } else {
-                        "ETH-$fromCurrency" // outra moeda -> ETH (inverso para a API)
+                        "ETH-$fromCurrency"
                     }
                 } else {
-                    "$fromCurrency-$toCurrency" // Conversão normal
+                    "$fromCurrency-$toCurrency"
                 }
 
-                // Consultar a taxa de conversão na API
                 val response = RetrofitInstance.api.getExchangeRates(conversionKey)
-                val key = conversionKey.replace("-", "") // Formato da chave esperada na resposta
+                val key = conversionKey.replace("-", "")
                 val conversionRate = response[key]?.bid?.toDoubleOrNull()
 
-                // Validar a taxa de conversão
                 if (conversionRate == null || conversionRate <= 0) {
                     withContext(Dispatchers.Main) {
                         progressBar.visibility = View.GONE
@@ -229,25 +215,22 @@ class ConvertResourcesActivity : AppCompatActivity() {
                     return@launch
                 }
 
-                // Realizar a conversão
                 val convertedAmount = if (isDigitalCurrencyConversion) {
                     if (fromCurrency == "BTC" || fromCurrency == "ETH") {
-                        amount * conversionRate // BTC -> outra moeda
+                        amount * conversionRate
                     } else {
-                        amount / conversionRate // outra moeda -> BTC
+                        amount / conversionRate
                     }
                 } else {
-                    amount * conversionRate // Conversão normal
+                    amount * conversionRate
                 }
 
-                // Atualizar os saldos no banco de dados
                 val updatedFromBalance = fromBalance.copy(balance = fromBalance.balance - amount)
                 val updatedToBalance = toBalance.copy(balance = toBalance.balance + convertedAmount)
 
                 userBalanceDao.insertOrUpdate(updatedFromBalance)
                 userBalanceDao.insertOrUpdate(updatedToBalance)
 
-                // Atualizar a interface do usuário e redirecionar
                 withContext(Dispatchers.Main) {
                     progressBar.visibility = View.GONE
                     btnConvert.isEnabled = true
@@ -261,7 +244,6 @@ class ConvertResourcesActivity : AppCompatActivity() {
                     finish()
                 }
             } catch (e: Exception) {
-                // Tratar erros durante a conversão
                 withContext(Dispatchers.Main) {
                     progressBar.visibility = View.GONE
                     btnConvert.isEnabled = true

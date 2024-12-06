@@ -5,6 +5,6 @@ import androidx.room.PrimaryKey
 
 @Entity
 data class UserBalance(
-    @PrimaryKey val currency: String, // USD, BRL, EUR, BTC, ETH
+    @PrimaryKey val currency: String,
     val balance: Double
 )

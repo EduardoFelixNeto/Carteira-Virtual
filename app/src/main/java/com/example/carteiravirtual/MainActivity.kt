@@ -22,7 +22,6 @@ class MainActivity : AppCompatActivity() {
 
         tvBalance = findViewById(R.id.tvBalance)
 
-        // Configuração dos botões
         findViewById<Button>(R.id.btnDeposit).setOnClickListener {
             startActivity(Intent(this, DepositActivity::class.java))
         }
@@ -39,7 +38,6 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
 
-        // Buscar o saldo atualizado do banco de dados
         CoroutineScope(Dispatchers.IO).launch {
             val balance = userBalanceDao.getBalanceOrNull("BRL") ?: UserBalance("BRL", 0.0)
             val formattedBalance = "Saldo: R$%.2f".format(balance.balance)
